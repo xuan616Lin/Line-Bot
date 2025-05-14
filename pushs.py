@@ -9,7 +9,7 @@ from urllib.parse import quote
 import requests
 import xml.etree.ElementTree as ET
 
-from linebot.v3.messaging import ( configuration, ApiClient, MessagingApi,
+from linebot.v3.messaging import ( Configuration, ApiClient, MessagingApi,
     TextMessage, QuickReply, QuickReplyItem, PostbackAction,
     PushMessageRequest, ReplyMessageRequest, FlexMessage, FlexContainer,DatetimePickerAction
 )
@@ -232,9 +232,9 @@ def send_scheduled_news():
                         }
                     }
                     all_bubbles.append(bubble)
-            configuration = {
-                "channel_access_token": os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-            }
+            configuration =Configuration(
+                access_token=os.getenv('CHANNEL_ACCESS_TOKEN')
+                )
             with ApiClient(configuration) as client:
                 api = MessagingApi(client)
                 for i in range(0, len(all_bubbles), 10):
