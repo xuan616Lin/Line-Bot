@@ -7,10 +7,5 @@
   "routes": [
     { "src": "/callback", 
       "dest": "app.py" }
-  ],
-  "env": {
-    "CHANNEL_ACCESS_TOKEN": "@channel_access_token",
-    "CHANNEL_SECRET":       "@channel_secret",
-    "DATABASE_URL":         "@database_url"
-  }
+  ]
 }
