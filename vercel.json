@@ -1,10 +1,12 @@
 {
   "version": 2,
   "builds": [
-    { "src": "app.py", "use": "@vercel/python" }
+    { "src": "app.py", 
+      "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/callback", "dest": "app.py" }
+    { "src": "/callback", 
+      "dest": "app.py" }
   ],
   "env": {
     "CHANNEL_ACCESS_TOKEN": "@channel_access_token",
