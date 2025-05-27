@@ -1,3 +1,4 @@
+# news.py
 import time
 import concurrent.futures
 import requests
@@ -6,10 +7,11 @@ from urllib.parse import quote
 
 from linebot.v3.messaging import (
     ReplyMessageRequest, TextMessage,
-    QuickReply, QuickReplyItem, PushMessageRequest, PostbackAction,FlexMessage, FlexContainer
+    QuickReply, QuickReplyItem, PushMessageRequest,
+    PostbackAction, FlexMessage, FlexContainer
 )
 
-from subscribetest import user_subscriptions, ALL_TOPICS
+import db    # <= 新增
 
 def fetch_google_news(topic, count=3):
     rss_url = (
@@ -33,13 +35,14 @@ def fetch_google_news(topic, count=3):
 
 def handle_news(event, line_bot_api):
     user_id = event.source.user_id if hasattr(event.source, 'user_id') else "unknown"
-    topics = user_subscriptions.get(user_id, [])
+    # 從資料庫讀訂閱清單
+    topics = db.list_subscriptions(user_id)
 
     # 無訂閱時
     if not topics:
         qr = QuickReply(items=[
             QuickReplyItem(
-                action=PostbackAction(label="新增訂閱", data="action=start_add_subscription")
+                action=PostbackAction(label="＋ 新增訂閱", data="action=start_add_subscription")
             )
         ])
         return line_bot_api.reply_message_with_http_info(
@@ -49,7 +52,7 @@ def handle_news(event, line_bot_api):
             )
         )
 
-    # 回覆等待
+    # 顯示待命訊息
     line_bot_api.reply_message_with_http_info(
         ReplyMessageRequest(
             reply_token=event.reply_token,
@@ -57,17 +60,23 @@ def handle_news(event, line_bot_api):
         )
     )
 
-    # 抓新聞
+    # 並行抓每個主題的新聞
     all_news = {}
     with concurrent.futures.ThreadPoolExecutor() as exe:
-        futs = {exe.submit(fetch_google_news, t, 3): t for t in topics}
-        for f in concurrent.futures.as_completed(futs):
-            all_news[futs[f]] = f.result()
+        futures = {exe.submit(fetch_google_news, t, 3): t for t in topics}
+        for fut in concurrent.futures.as_completed(futures):
+            all_news[futures[fut]] = fut.result()
 
     bubbles = []
-    
-    for topic, items in all_news.items():  # fetched_news: dict of topic → list of news dict
+    for topic, items in all_news.items():
         for n in items:
+            # （選擇性）把這筆新聞寫進 news_history
+            # with db.get_conn() as conn, conn.cursor() as cur:
+            #     cur.execute(
+            #       "INSERT INTO news_history(user_id,topic,title,url) VALUES(%s,%s,%s,%s)",
+            #       (user_id, topic, n["title"], n["url"])
+            #     )
+
             bubbles.append({
                 "type": "bubble",
                 "size": "micro",
@@ -75,21 +84,8 @@ def handle_news(event, line_bot_api):
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        {
-                            "type": "text",
-                            "text": topic,
-                            "weight": "bold",
-                            "size": "md",
-                            "margin": "md"
-                        },
-                        {
-                            "type": "text",
-                            "text": n["title"],
-                            "size": "sm",
-                            "weight": "bold",
-                            "wrap": True,
-                            "margin": "sm"
-                        }
+                        {"type": "text", "text": topic, "weight": "bold", "size": "md", "margin": "md"},
+                        {"type": "text", "text": n["title"], "size": "sm", "weight": "bold", "wrap": True, "margin": "sm"}
                     ]
                 },
                 "footer": {
@@ -98,30 +94,19 @@ def handle_news(event, line_bot_api):
                     "contents": [
                         {
                             "type": "button",
-                            "action": {
-                                "type": "uri",
-                                "label": "開啟新聞",
-                                "uri": n["url"]
-                            },
-                            "style": "primary",
-                            "height": "sm",
-                            "gravity": "center",
-                            "margin": "md"
+                            "action": {"type": "uri", "label": "開啟新聞", "uri": n["url"]},
+                            "style": "primary", "height": "sm", "gravity": "center", "margin": "md"
                         }
                     ],
-                    "spacing": "sm",
-                    "paddingAll": "10px"
+                    "spacing": "sm", "paddingAll": "10px"
                 }
             })
 
     if bubbles:
         flex = FlexMessage(
             alt_text="即時新聞",
-            contents=FlexContainer.from_dict({
-                "type": "carousel",
-                "contents": bubbles
-            })
+            contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles})
         )
-        line_bot_api.push_message_with_http_info(
+        return line_bot_api.push_message_with_http_info(
             PushMessageRequest(to=user_id, messages=[flex])
         )
