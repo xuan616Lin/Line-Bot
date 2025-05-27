@@ -3,3 +3,5 @@ flask==3.0.0
 python-dotenv
 requests
 schedule
+psycopg2-binary
+pg8000
