@@ -38,7 +38,7 @@ def init_db():
     """)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS push_schedule (
-      user_id   TEXT NOT NULL PRIMARY KEY,
+      user_id   TEXT PRIMARY KEY,
       push_time TEXT NOT NULL
     );
     """)
@@ -121,3 +121,17 @@ def get_push_time(user_id):
     cur.close()
     conn.close()
     return row[0] if row else None
+
+def list_push_schedule():
+    """
+    從資料庫撈出所有使用者的推播時間設定，
+    回傳格式為 dict: { user_id: push_time, ... }
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id, push_time FROM push_schedule")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    # 把 list of tuples 轉成 dict
+    return {user_id: push_time for user_id, push_time in rows}
