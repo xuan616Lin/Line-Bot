@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 2. 初始化資料庫（create table if not exists…）
+import db
 from db import init_db
 init_db()
 
@@ -17,7 +18,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, PostbackEvent
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi,
-    ReplyMessageRequest, TextMessage
+    ReplyMessageRequest, TextMessage,ImageMessage
 )
 
 # 從子模組 import 各功能處理器
@@ -109,5 +110,4 @@ def handle_postback(event):
 
 if __name__ == "__main__":
     # 在本地測試可以跑 8000 埠，部署到 Vercel 時會自動以環境變數 PORT 覆蓋
-    port = int(os.getenv("PORT", 8000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)
