@@ -45,15 +45,19 @@ line_handler  = WebhookHandler(os.getenv("CHANNEL_SECRET"))
 # 4. 啟動背景推播排程
 threading.Thread(target=start_push_scheduler, daemon=True).start()
 
-@app.route("/callback", methods=["POST"])
+@app.route("/callback", methods=["GET","POST"])
 def callback():
+    if request.method == "GET":
+        return "OK", 200
+    
     signature = request.headers.get("X-Line-Signature", "")
     body = request.get_data(as_text=True)
     try:
         line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-    return "OK"
+        
+    return "OK",200
 
 @line_handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
